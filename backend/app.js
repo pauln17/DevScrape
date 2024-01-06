@@ -4,6 +4,10 @@ const app = express()
 const middleware = require('./utils/middleware')
 const loggers = require('./utils/loggers')
 
+// TEMP
+const { websites, scrape } = require('./puppeteer/scraper')
+scrape(websites[0])
+
 // Misc
 app.use(express.json())
 app.use(middleware.requestLogger)

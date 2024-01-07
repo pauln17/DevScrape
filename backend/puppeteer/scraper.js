@@ -55,14 +55,13 @@ const runFilter = async (page, datePosted) => {
 
 const scrape = async (page, url, limit) => {
     const jobs = []
-
-    const extractedData = await page.evaluate(async () => {
-        const data = Array.from(document.querySelectorAll('.jcs-JobTitle'))
-        return data.map((item) => ({
+    let extractedData = await page.$$eval('.jcs-JobTitle', (extractedData) => {
+        return extractedData.map((item) => ({
             title: item.querySelector('span').innerText,
             link: item.getAttribute('href')
         }))
     })
+
 
     while (jobs.length < limit) {
         for (const data of extractedData) {
@@ -106,6 +105,14 @@ const scrape = async (page, url, limit) => {
         const nextButton = await page.$('a[data-testid="pagination-page-next"]');
         if (nextButton && (jobs.length < limit)) {
             await page.click('a[data-testid="pagination-page-next"]');
+            await page.waitForSelector('.jcs-JobTitle')
+            extractedData = await page.$$eval('.jcs-JobTitle', (extractedData) => {
+                return extractedData.map((item) => ({
+                    title: item.querySelector('span').innerText,
+                    link: item.getAttribute('href')
+                }))
+            })
+            console.log(extractedData)
         } else {
             break;
         }

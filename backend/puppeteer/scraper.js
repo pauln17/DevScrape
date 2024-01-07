@@ -3,7 +3,6 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 
 puppeteer.use(StealthPlugin())
 const { executablePath } = require('puppeteer')
-const Job = require('../models/job')
 
 // Websites
 const website = 'https://ca.indeed.com'
@@ -35,10 +34,8 @@ const extract = async (url, title, location, datePosted, limit) => {
     // Scrape data by retrieving titles from the cards first, then using those titles to click on each card to scrape the right panel that appears
     const jobs = await scrape(page, url, limit)
 
-    await Job.deleteMany({})
-    await Job.insertMany(jobs)
-
     await browser.close()
+    return jobs
 }
 
 // Filters

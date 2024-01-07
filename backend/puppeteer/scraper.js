@@ -9,15 +9,71 @@ const { executablePath } = require('puppeteer')
 const website = 'https://ca.indeed.com'
 
 // Scraper Function
-const scrape = async (url) => {
+const extract = async (url, title, location, locationType, jobType, datePosted, limit) => {
+    // Launch puppeteer and go to website to scrape
     const browser = await puppeteer.launch({ headless: 'new', executablePath: executablePath() })
     const context = await browser.createIncognitoBrowserContext();
     const page = await context.newPage()
-    await page.goto(`${url}/jobs?q=Developer&l=Waterloo`)
+    await page.goto(`${url}/jobs?q=${title}&l=${location}`)
 
+    // Handle search filters / forms
+    await runFilters(page, locationType, jobType, datePosted)
+
+    // Scrape data by retrieving titles from the cards first, then using those titles to click on each card to scrape the right panel that appears
+    await page.screenshot({ path: 'test.png' })
+    const jobs = await scrape(page, url, limit)
+
+    // Write contents to a jobs.json file
+    fs.writeFile('jobs.json', JSON.stringify(jobs), (error) => {
+        if (error) throw error;
+        console.log('File saved')
+    })
+    await browser.close()
+}
+
+// Filters
+const runFilters = async (page, locationType, jobType, datePosted) => {
+    const datePostedButton = await page.$('#filter-dateposted');
+    if (datePostedButton) {
+        await page.click('#filter-dateposted')
+        const element = (await page.$x(`//a[contains(text(), "Last ${datePosted}")]`))[0]
+        await page.waitForTimeout(500);
+
+        await page.evaluate((element) => {
+            element.click()
+        }, element);
+        await page.waitForTimeout(1500);
+    }
+
+    const locationTypeButton = await page.$('#filter-remotejob');
+    if (locationTypeButton) {
+        await page.click('#filter-remotejob')
+        const element = (await page.$x(`//a[contains(text(), "${locationType}")]`))[0]
+        await page.waitForTimeout(500);
+
+        await page.evaluate((element) => {
+            element.click()
+        }, element);
+        await page.waitForTimeout(1500);
+    }
+
+    const jobTypeButton = await page.$('#filter-jobtype')
+    if (jobTypeButton) {
+        await page.click('#filter-jobtype')
+        const element = (await page.$x(`//a[contains(text(), "${jobType}")]`))[0]
+        await page.waitForTimeout(500);
+
+        await page.evaluate((element) => {
+            element.click()
+        }, element);
+        await page.waitForTimeout(1500);
+    }
+}
+
+const scrape = async (page, url, limit) => {
     const jobs = []
-    const amount = 3
-    while (jobs.length < amount) {
+
+    while (jobs.length < limit) {
         await page.waitForSelector('span');
 
         const extractedData = await page.evaluate(async () => {
@@ -45,13 +101,14 @@ const scrape = async (url) => {
                 return jobObject
             }, data, url)
 
-            if (jobs.length < amount) {
+            if (jobs.length < limit) {
                 jobs.push(jobObject)
             } else {
                 break;
             }
         }
 
+        // Pagination
         await page.evaluate(() => {
             window.scrollTo(0, document.body.scrollHeight);
         });
@@ -64,14 +121,10 @@ const scrape = async (url) => {
         }
     }
 
-    fs.writeFile('jobs.json', JSON.stringify(jobs), (error) => {
-        if (error) throw error;
-        console.log('File saved')
-    })
-    await browser.close()
+    return jobs
 }
 
 module.exports = {
     website,
-    scrape
+    extract
 }

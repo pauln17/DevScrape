@@ -1,9 +1,8 @@
 const jobsRouter = require('express').Router()
 const Job = require('../models/job')
 
-
 jobsRouter.get('/', async (req, res) => {
-    const jobs = Job.find({})
+    const jobs = await Job.find({})
     res.json(jobs)
 })
 

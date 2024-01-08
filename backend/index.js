@@ -5,7 +5,6 @@ const cron = require('node-cron')
 const Job = require('./models/job')
 const { website, keywords, extract } = require('./puppeteer/scraper')
 
-
 const task = async () => {
     console.log('Scraping...')
     try {
@@ -36,5 +35,4 @@ const task = async () => {
 
 app.listen(config.PORT, () => {
     logger.info(`Server running on port ${config.PORT}`)
-    task()
 })

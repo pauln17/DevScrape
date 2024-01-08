@@ -7,29 +7,16 @@ const { executablePath } = require('puppeteer')
 // Websites
 const website = 'https://ca.indeed.com'
 
-// Keywords
-const keywords = [
-    'Developer',
-    'Full-Stack Developer',
-    'Web Developer',
-    'Backend Developer',
-    'Software Engineer',
-    'Entry-Level Developer',
-    'Entry-Level Engineer',
-    'Full-Stack Intern',
-    'Intern Developer'
-]
-
 // Scraper Function
-const extract = async (url, title, location, datePosted, limit) => {
+const extract = async (title, location, jobType, datePosted, limit) => {
     // Launch puppeteer and go to website to scrape
     const browser = await puppeteer.launch({ headless: 'new', executablePath: executablePath() })
     const context = await browser.createIncognitoBrowserContext();
     const page = await context.newPage()
-    await page.goto(`${url}/jobs?q=${title}&l=${location}`)
+    await page.goto(`${website}/jobs?q=${title}&l=${location}`)
 
     // Handle search filters / forms
-    await runFilter(page, datePosted)
+    await runFilters(page, jobType, datePosted)
 
     // Scrape data by retrieving titles from the cards first, then using those titles to click on each card to scrape the right panel that appears
     const jobs = await scrape(page, url, limit)
@@ -39,7 +26,7 @@ const extract = async (url, title, location, datePosted, limit) => {
 }
 
 // Filters
-const runFilter = async (page, datePosted) => {
+const runFilters = async (page, jobType, datePosted) => {
     const datePostedButton = await page.$('#filter-dateposted');
     if (datePostedButton) {
         await page.click('#filter-dateposted')
@@ -49,6 +36,19 @@ const runFilter = async (page, datePosted) => {
         await page.evaluate((element) => {
             element.click()
         }, element);
+    }
+    await page.waitForTimeout(1500);
+
+    const jobTypeButton = await page.$('#filter-jobtype')
+    if (jobTypeButton) {
+        await page.click('#filter-jobtype')
+        const element = (await page.$x(`//a[contains(text(), "${jobType}")]`))[0]
+        await page.waitForTimeout(500);
+
+        await page.evaluate((element) => {
+            element.click()
+        }, element);
+        await page.waitForTimeout(1500);
     }
     await page.waitForTimeout(1500);
 }
@@ -81,7 +81,6 @@ const scrape = async (page, url, limit) => {
                             title: data.title,
                             company: job.querySelector('.css-1f8zkg3.e19afand0').innerText,
                             location: job.querySelector('div[data-testid="inlineHeader-companyLocation"] div').innerText,
-                            description: job.querySelector('#jobDescriptionText').innerText,
                             link: url + data.link
                         }
 
@@ -121,8 +120,4 @@ const scrape = async (page, url, limit) => {
     return jobs
 }
 
-module.exports = {
-    website,
-    keywords,
-    extract
-}
+module.exports = extract

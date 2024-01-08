@@ -1,9 +1,18 @@
 const jobsRouter = require('express').Router()
-const jobs = require('../models/job')
-const { website, extract } = require('../puppeteer/scraper')
+const Job = require('../models/job')
 
 jobsRouter.get('/', async (req, res) => {
-    const { title, location, locationType, jobType, datePosted, limit } = request.body
+    const jobs = await Job.find({})
+    res.json(jobs)
+})
+
+jobsRouter.get('/:id', async (req, res) => {
+    const job = await Job.findById(req.params.id)
+    if (job) {
+        res.status(200).json(job)
+    } else {
+        res.status(404).end()
+    }
 })
 
 module.exports = jobsRouter

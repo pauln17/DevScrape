@@ -7,8 +7,21 @@ const { executablePath } = require('puppeteer')
 // Websites
 const website = 'https://ca.indeed.com'
 
+// Keywords
+const keywords = [
+    'Developer',
+    'Full-Stack Developer',
+    'Web Developer',
+    'Backend Developer',
+    'Software Engineer',
+    'Entry-Level Developer',
+    'Entry-Level Engineer',
+    'Full-Stack Intern',
+    'Intern Developer'
+]
+
 // Scraper Function
-const extract = async (url, title, location, datePosted, limit) => {
+const extract = async (url, title, location, jobType, datePosted, limit) => {
     // Launch puppeteer and go to website to scrape
     const browser = await puppeteer.launch({ headless: 'new', executablePath: executablePath() })
     const context = await browser.createIncognitoBrowserContext();
@@ -26,18 +39,32 @@ const extract = async (url, title, location, datePosted, limit) => {
 }
 
 // Filters
-const runFilters = async (page, datePosted) => {
+const runFilters = async (page, jobType, datePosted) => {
     const datePostedButton = await page.$('#filter-dateposted');
     if (datePostedButton) {
         await page.click('#filter-dateposted')
         const element = (await page.$x(`//a[contains(text(), "Last ${datePosted}")]`))[0]
-        await page.waitForTimeout(500);
-
-        await page.evaluate((element) => {
-            element.click()
-        }, element);
+        if (element) {
+            page.waitForTimeout(500);
+            await page.evaluate((element) => {
+                element.click()
+            }, element);
+            await page.waitForTimeout(1500);
+        }
     }
-    await page.waitForTimeout(1500);
+
+    const jobTypeButton = await page.$('#filter-jobtype')
+    if (jobTypeButton) {
+        await page.click('#filter-jobtype')
+        const element = (await page.$x(`//a[contains(text(), "${jobType}")]`))[0]
+        if (element) {
+            await page.waitForTimeout(500);
+            await page.evaluate((element) => {
+                element.click()
+            }, element);
+            await page.waitForTimeout(1500);
+        }
+    }
 }
 
 const scrape = async (page, url, limit) => {
@@ -97,7 +124,6 @@ const scrape = async (page, url, limit) => {
                     link: item.getAttribute('href')
                 }))
             })
-            console.log(extractedData)
         } else {
             break;
         }
@@ -105,4 +131,8 @@ const scrape = async (page, url, limit) => {
     return jobs
 }
 
-module.exports = extract
+module.exports = {
+    extract,
+    keywords,
+    website
+}

@@ -4,8 +4,6 @@ const app = express()
 const middleware = require('./utils/middleware')
 const loggers = require('./utils/loggers')
 const jobsRouter = require('./controllers/jobs')
-const usersRouter = require('./controllers/users')
-const loginRouter = require('./controllers/login')
 const mongoose = require('mongoose')
 
 loggers.info('Connecting to', config.MONGODB_URI)
@@ -24,8 +22,6 @@ app.use(middleware.requestLogger)
 
 // Routes
 app.use('/api/jobs', jobsRouter)
-app.use('/api/users', usersRouter)
-app.use('/api/login', loginRouter)
 
 // Middleware
 app.use(middleware.unknownEndpoint)

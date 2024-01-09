@@ -5,6 +5,7 @@ const middleware = require('./utils/middleware')
 const loggers = require('./utils/loggers')
 const jobsRouter = require('./controllers/jobs')
 const mongoose = require('mongoose')
+const cors = require('cors')
 
 loggers.info('Connecting to', config.MONGODB_URI)
 
@@ -17,6 +18,9 @@ mongoose.connect(config.MONGODB_URI)
     })
 
 // Misc
+app.use(cors({
+    origin: "http://localhost:3001"
+}))
 app.use(express.json())
 app.use(middleware.requestLogger)
 

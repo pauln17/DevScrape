@@ -12,7 +12,7 @@ const task = async () => {
         const jobsArray = []
 
         for (const word of keywords) {
-            const jobs = await extract(website, word, 'Waterloo, ON', 'Internship', '3', 15)
+            const jobs = await extract(website, word, 'Waterloo, ON', 'Internship', '7', 15)
             for (const job of jobs) {
                 const index = jobsArray.findIndex(i => i.title === job.title)
                 if (index === -1) {

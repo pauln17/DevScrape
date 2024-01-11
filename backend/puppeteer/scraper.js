@@ -69,41 +69,28 @@ const runFilters = async (page, jobType, datePosted) => {
 
 const scrape = async (page, url, limit) => {
     const jobs = []
-    let extractedData = await page.$$eval('.jcs-JobTitle', (extractedData) => {
+    let extractedData = await page.$$eval('.resultContent', (extractedData) => {
         return extractedData.map((item) => ({
-            title: item.querySelector('span').innerText,
-            link: item.getAttribute('href')
+            title: item.querySelector('.jcs-JobTitle span').innerText,
+            company: item.querySelector('span[data-testid="company-name"]').innerText,
+            location: item.querySelector('div[data-testid="text-location"]').innerText,
+            link: item.querySelector('.jcs-JobTitle').getAttribute('href')
         }))
     })
 
     while (jobs.length < limit) {
         for (const data of extractedData) {
             if (jobs.length < limit) {
-                const element = (await page.$x(`//span[contains(text(), "${data.title}")]`))[0]
-
-                if (element) {
-                    await page.evaluate((element) => {
-                        element.click()
-                    }, element);
-
-                    await page.waitForTimeout(1500)
-
-                    const jobObject = await page.evaluate(async (data, url) => {
-                        const job = document.querySelector('.fastviewjob')
-                        const jobObject = {
-                            title: data.title,
-                            company: job.querySelector('.css-1f8zkg3.e19afand0').innerText,
-                            location: job.querySelector('div[data-testid="inlineHeader-companyLocation"] div').innerText,
-                            link: url + data.link
-                        }
-
-                        return jobObject
-                    }, data, url)
-
-                    jobs.push(jobObject)
-                } else {
-                    break;
-                }
+                const jobObject = await page.evaluate(async (data, url) => {
+                    const jobObject = {
+                        title: data.title,
+                        company: data.company,
+                        location: data.location,
+                        link: url + data.link
+                    }
+                    return jobObject
+                }, data, url)
+                jobs.push(jobObject)
             } else {
                 break;
             }
@@ -118,10 +105,12 @@ const scrape = async (page, url, limit) => {
         if (nextButton && (jobs.length < limit)) {
             await page.click('a[data-testid="pagination-page-next"]');
             await page.waitForSelector('.jcs-JobTitle')
-            extractedData = await page.$$eval('.jcs-JobTitle', (extractedData) => {
+            extractedData = await page.$$eval('.jobTitle', (extractedData) => {
                 return extractedData.map((item) => ({
-                    title: item.querySelector('span').innerText,
-                    link: item.getAttribute('href')
+                    title: item.querySelector('.jcs-JobTitle span').innerText,
+                    company: item.querySelector('span[data-testid="company-name"]').innerText,
+                    location: item.querySelector('div[data-testid="text-location"]').innerText,
+                    link: item.querySelector('.jcs-JobTitle').getAttribute('href')
                 }))
             })
         } else {
@@ -130,6 +119,7 @@ const scrape = async (page, url, limit) => {
     }
     return jobs
 }
+
 
 module.exports = {
     extract,

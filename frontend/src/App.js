@@ -6,7 +6,7 @@ import moment from 'moment'
 
 function App() {
   const [jobs, setJobs] = useState(false);
-  const [time, setTime] = useState({})
+  const [time, setTime] = useState(null)
 
   const fetchJobs = async () => {
     try {

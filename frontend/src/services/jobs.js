@@ -1,9 +1,10 @@
 import axios from 'axios'
-// const baseUrl = 'http://localhost:3001/api/jobs'
-const baseUrlDeply = 'https://job-webscraper-backend.onrender.com/api/jobs'
+const baseUrl = process.env.REACT_APP_MODE === 'development'
+    ? process.env.REACT_APP_BASEURLDEV
+    : process.env.REACT_APP_BASEURLDEPLOY
 
 const getAll = async () => {
-    const response = await axios.get(baseUrlDeply)
+    const response = await axios.get(baseUrl)
     return response.data
 };
 

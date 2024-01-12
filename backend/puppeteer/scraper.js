@@ -21,8 +21,7 @@ const keywords = [
 
 // Scraper Function
 const extract = async (url, title, location, datePosted) => {
-    // Launch puppeteer and go to website to scrape
-    const browser = await puppeteer.launch({ headless: false, executablePath: executablePath() })
+    const browser = await puppeteer.launch({ headless: 'new', executablePath: executablePath() })
     const context = await browser.createIncognitoBrowserContext();
     const page = await context.newPage()
 
@@ -43,7 +42,6 @@ const extract = async (url, title, location, datePosted) => {
     return jobs
 }
 
-// Filters
 const runFilter = async (page, datePosted) => {
     const datePostedButton = await page.waitForSelector('#filter-dateposted')
     if (datePostedButton) {

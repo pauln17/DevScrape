@@ -17,12 +17,6 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    fetchJobs();
-    const intervalId = setInterval(updateTimer, 1000);
-
-    return () => clearInterval(intervalId);
-  }, []);
 
   const updateTimer = () => {
     const currentDate = moment(new Date())
@@ -46,6 +40,15 @@ function App() {
     });
   }
 
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  useEffect(() => {
+    const intervalId = setInterval(updateTimer, 1000);
+    return () => clearInterval(intervalId);
+  });
+
   const formatTime = (time) => {
     return time < 10 ? `0${time}` : time;
   }
@@ -62,8 +65,10 @@ function App() {
           <DataTable jobs={jobs} />
         </div>
         :
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%', color: 'white', fontWeight: '1000', margin: 0, fontSize: '36px' }}>
-          SCRAPING...
+        <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%', color: 'white', fontWeight: '1000', margin: 0, fontSize: '36px' }}>
+          CURRENTLY SCRAPING
+          <br />
+          REFRESH SOON
         </div>
       }
     </div>

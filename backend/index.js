@@ -3,28 +3,36 @@ const config = require('./utils/config')
 const logger = require('./utils/loggers')
 const cron = require('node-cron')
 const Job = require('./models/job')
+const { performance } = require('perf_hooks');
 const { website, keywords, extract } = require('./puppeteer/scraper')
+const loggers = require('./utils/loggers')
 
 const task = async () => {
-    console.log('Scraping...')
+    const t0 = performance.now();
     try {
         await Job.deleteMany({})
-        const jobsArray = []
 
+        const tempArray = []
         for (const word of keywords) {
-            const jobs = await extract(website, word, 'Waterloo, ON', 'Internship', '7', 15)
-            for (const job of jobs) {
-                const index = jobsArray.findIndex(i => i.title === job.title)
-                if (index === -1) {
-                    jobsArray.push(job)
-                }
+            const jobs = await extract(website, word, 'Waterloo, ON', '24')
+            tempArray.push(...jobs)
+        }
+
+        const jobsArray = []
+        for (const job of tempArray) {
+            const index = jobsArray.findIndex(i => i.title === job.title)
+            if (index === -1) {
+                jobsArray.push(job)
             }
         }
+
         await Job.insertMany(jobsArray)
     } catch (error) {
-        console.log('Scraping Task Error: ', error)
+        loggers.info('Scraping Task Error: ', error)
     }
-    console.log('Scraping Complete')
+
+    const t1 = performance.now();
+    loggers.info("Scraper completed in " + Math.floor(((t1 - t0) / 1000) * 1000) / 1000 + " seconds");
 }
 
 // Run daily at 10 AM

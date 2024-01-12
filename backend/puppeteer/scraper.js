@@ -10,102 +10,63 @@ const website = 'https://ca.indeed.com'
 // Keywords
 const keywords = [
     'Developer',
-    'Full-Stack Developer',
-    'Web Developer',
-    'Backend Developer',
+    'Full Stack',
+    'Backend',
     'Software Engineer',
-    'Entry-Level Developer',
-    'Entry-Level Engineer',
-    'Full-Stack Intern',
-    'Intern Developer'
+    'Developer Intern',
+    'Engineer Intern',
+    'Entry Level Developer',
+    'Entry Level Engineer'
 ]
 
 // Scraper Function
-const extract = async (url, title, location, jobType, datePosted, limit) => {
+const extract = async (url, title, location, datePosted) => {
     // Launch puppeteer and go to website to scrape
-    const browser = await puppeteer.launch({ headless: 'new', executablePath: executablePath() })
+    const browser = await puppeteer.launch({ headless: false, executablePath: executablePath() })
     const context = await browser.createIncognitoBrowserContext();
     const page = await context.newPage()
+
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+        if (request.resourceType() === 'document')
+            request.continue()
+        else
+            request.abort()
+    });
+
     await page.goto(`${website}/jobs?q=${title}&l=${location}`)
 
-    // Handle search filters / forms
-    await runFilters(page, jobType, datePosted)
-
-    // Scrape data by retrieving titles from the cards first, then using those titles to click on each card to scrape the right panel that appears
-    const jobs = await scrape(page, url, limit)
-
+    await runFilter(page, datePosted)
+    const jobs = await scrape(page, url)
     await browser.close()
+
     return jobs
 }
 
 // Filters
-const runFilters = async (page, jobType, datePosted) => {
-    const datePostedButton = await page.$('#filter-dateposted');
+const runFilter = async (page, datePosted) => {
+    const datePostedButton = await page.waitForSelector('#filter-dateposted')
     if (datePostedButton) {
         await page.click('#filter-dateposted')
         const element = (await page.$x(`//a[contains(text(), "Last ${datePosted}")]`))[0]
         if (element) {
-            page.waitForTimeout(500);
             await page.evaluate((element) => {
                 element.click()
             }, element);
-            await page.waitForTimeout(1500);
         }
     }
 
-    const jobTypeButton = await page.$('#filter-jobtype')
-    if (jobTypeButton) {
-        await page.click('#filter-jobtype')
-        const element = (await page.$x(`//a[contains(text(), "${jobType}")]`))[0]
-        if (element) {
-            await page.waitForTimeout(500);
-            await page.evaluate((element) => {
-                element.click()
-            }, element);
-            await page.waitForTimeout(1500);
-        }
-    }
+    await page.waitForNavigation({
+        waitUntil: 'networkidle0',
+    });
 }
 
-const scrape = async (page, url, limit) => {
-    const jobs = []
-    let extractedData = await page.$$eval('.resultContent', (extractedData) => {
-        return extractedData.map((item) => ({
-            title: item.querySelector('.jcs-JobTitle span').innerText,
-            company: item.querySelector('span[data-testid="company-name"]').innerText,
-            location: item.querySelector('div[data-testid="text-location"]').innerText,
-            link: item.querySelector('.jcs-JobTitle').getAttribute('href')
-        }))
-    })
-
-    while (jobs.length < limit) {
-        for (const data of extractedData) {
-            if (jobs.length < limit) {
-                const jobObject = await page.evaluate(async (data, url) => {
-                    const jobObject = {
-                        title: data.title,
-                        company: data.company,
-                        location: data.location,
-                        link: url + data.link
-                    }
-                    return jobObject
-                }, data, url)
-                jobs.push(jobObject)
-            } else {
-                break;
-            }
-        }
-
-        // Pagination
-        await page.evaluate(() => {
-            window.scrollTo(0, document.body.scrollHeight);
-        });
-
-        const nextButton = await page.$('a[data-testid="pagination-page-next"]');
-        if (nextButton && (jobs.length < limit)) {
-            await page.click('a[data-testid="pagination-page-next"]');
-            await page.waitForSelector('.jcs-JobTitle')
-            extractedData = await page.$$eval('.jobTitle', (extractedData) => {
+const scrape = async (page, url) => {
+    const extractedDataArray = []
+    while (true) {
+        const resultsExist = await page.$('.resultContent')
+        if (resultsExist) {
+            const extractedData = await page.$$eval('.resultContent', (extractedData) => {
                 return extractedData.map((item) => ({
                     title: item.querySelector('.jcs-JobTitle span').innerText,
                     company: item.querySelector('span[data-testid="company-name"]').innerText,
@@ -113,10 +74,38 @@ const scrape = async (page, url, limit) => {
                     link: item.querySelector('.jcs-JobTitle').getAttribute('href')
                 }))
             })
+            extractedDataArray.push(...extractedData)
+
+            // Pagination
+            await page.evaluate(() => {
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+
+            const nextButton = await page.$('a[data-testid="pagination-page-next"]');
+            if (nextButton) {
+                await page.click('a[data-testid="pagination-page-next"]');
+            } else {
+                break;
+            }
         } else {
             break;
         }
     }
+
+    const jobs = []
+    for (const data of extractedDataArray) {
+        const jobObject = await page.evaluate((data, url) => {
+            const jobObject = {
+                title: data.title,
+                company: data.company,
+                location: data.location,
+                link: url + data.link
+            }
+            return jobObject
+        }, data, url)
+        jobs.push(jobObject)
+    }
+
     return jobs
 }
 

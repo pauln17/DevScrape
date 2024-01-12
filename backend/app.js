@@ -19,9 +19,10 @@ mongoose.connect(config.MONGODB_URI)
     })
 
 // Misc
+const allowedOrigins = ["http://localhost:3000", "https://job-webscraper.onrender.com"];
 app.use(cors({
-    origin: "http://localhost:3000"
-}))
+    origin: allowedOrigins,
+}));
 app.use(express.json())
 app.use(middleware.requestLogger)
 

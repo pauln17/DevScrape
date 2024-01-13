@@ -16,39 +16,39 @@ const task = async () => {
         session = await mongoose.startSession();
 
         await session.withTransaction(async () => {
-            await Job.deleteMany({}).session(session)
-            loggers.info('Scraping...')
+            await Job.deleteMany({}).session(session);
+            loggers.info('Scraping...');
 
-            const tempArray = []
+            const tempArray = [];
             for (const word of keywords) {
-                const jobs = await extract(website, word, 'Waterloo, ON', '24')
-                tempArray.push(...jobs)
+                const jobs = await extract(website, word, 'Waterloo, ON', '24');
+                tempArray.push(...jobs);
             }
 
-            const jobsArray = []
+            const jobsArray = [];
             for (const job of tempArray) {
-                const index = jobsArray.findIndex(i => i.title === job.title)
+                const index = jobsArray.findIndex(i => i.title === job.title);
                 if (index === -1) {
-                    jobsArray.push(job)
+                    jobsArray.push(job);
                 }
             }
-
-            await Job.insertMany(jobsArray)
-            await session.commitTransaction().session(session)
-        })
+            await Job.insertMany(jobsArray, { session });
+        });
+        await session.commitTransaction();
     } catch (error) {
-        loggers.info('Scraping Task Error: ', error)
+        loggers.info('Scraping Task Error: ', error);
     } finally {
-        if (session) session.endSession()
+        session.endSession();
     }
 
     const t1 = performance.now();
     loggers.info("Scraper completed in " + Math.floor(((t1 - t0) / 1000) * 1000) / 1000 + " seconds");
-}
+};
 
 // Run daily at 10 AM
 cron.schedule(config.SCHEDULED_TIME, task)
 
 app.listen(config.PORT, () => {
     logger.info(`Server running on port ${config.PORT}`)
+    task()
 })

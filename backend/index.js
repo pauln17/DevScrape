@@ -47,7 +47,7 @@ const task = async () => {
 }
 
 // Run daily at 10 AM
-cron.schedule('0 10 * * *', task)
+cron.schedule(config.SCHEDULED_TIME, task)
 
 app.listen(config.PORT, () => {
     logger.info(`Server running on port ${config.PORT}`)

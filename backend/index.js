@@ -6,29 +6,40 @@ const Job = require('./models/job')
 const { performance } = require('perf_hooks');
 const { website, keywords, extract } = require('./puppeteer/scraper')
 const loggers = require('./utils/loggers')
+const mongoose = require('mongoose');
 
 const task = async () => {
     const t0 = performance.now();
+    let session;
+
     try {
-        await Job.deleteMany({})
+        session = await mongoose.startSession();
 
-        const tempArray = []
-        for (const word of keywords) {
-            const jobs = await extract(website, word, 'Waterloo, ON', '24')
-            tempArray.push(...jobs)
-        }
+        await session.withTransaction(async () => {
+            await Job.deleteMany({}).session(session)
+            loggers.info('Scraping...')
 
-        const jobsArray = []
-        for (const job of tempArray) {
-            const index = jobsArray.findIndex(i => i.title === job.title)
-            if (index === -1) {
-                jobsArray.push(job)
+            const tempArray = []
+            for (const word of keywords) {
+                const jobs = await extract(website, word, 'Waterloo, ON', '24')
+                tempArray.push(...jobs)
             }
-        }
 
-        await Job.insertMany(jobsArray)
+            const jobsArray = []
+            for (const job of tempArray) {
+                const index = jobsArray.findIndex(i => i.title === job.title)
+                if (index === -1) {
+                    jobsArray.push(job)
+                }
+            }
+
+            await Job.insertMany(jobsArray)
+            await session.commitTransaction().session(session)
+        })
     } catch (error) {
         loggers.info('Scraping Task Error: ', error)
+    } finally {
+        if (session) session.endSession()
     }
 
     const t1 = performance.now();

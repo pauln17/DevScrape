@@ -17,7 +17,6 @@ function App() {
     }
   };
 
-
   const updateTimer = () => {
     const currentDate = moment(new Date())
     let nextDate = moment(currentDate).set({ hour: 10, minute: 0, second: 0, millisecond: 0 });

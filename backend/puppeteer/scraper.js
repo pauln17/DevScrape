@@ -22,7 +22,7 @@ const keywords = [
 // Scraper Function
 const extract = async (url, title, location, datePosted) => {
     const browser = await puppeteer.launch({
-        headless: "new",
+        headless: 'new',
         executablePath: executablePath(),
     });
     const context = await browser.createIncognitoBrowserContext();
@@ -38,7 +38,9 @@ const extract = async (url, title, location, datePosted) => {
     });
 
     await page.goto(`${website}/jobs?q=${title}&l=${location}`);
-
+    await page.content({
+        waitUntil: "networkidle2",
+    });
     await runFilter(page, datePosted);
     const jobs = await scrape(page, url);
     await browser.close();
@@ -47,7 +49,7 @@ const extract = async (url, title, location, datePosted) => {
 };
 
 const runFilter = async (page, datePosted) => {
-    const datePostedButton = await page.waitForSelector("#filter-dateposted");
+    const datePostedButton = await page.$("#filter-dateposted");
     if (datePostedButton) {
         await page.click("#filter-dateposted");
         const element = (
@@ -58,11 +60,11 @@ const runFilter = async (page, datePosted) => {
                 element.click();
             }, element);
         }
+        await page.waitForNavigation({
+            waitUntil: "networkidle0",
+        });
     }
 
-    await page.waitForNavigation({
-        waitUntil: "networkidle0",
-    });
 };
 
 const scrape = async (page, url) => {

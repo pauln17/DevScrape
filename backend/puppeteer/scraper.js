@@ -2,10 +2,11 @@ const Job = require('../models/job');
 const { performance } = require('perf_hooks');
 const loggers = require('../utils/loggers');
 const mongoose = require('mongoose');
-const { Cluster } = require('puppeteer-cluster');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const anonymizeUaPlugin = require('puppeteer-extra-plugin-anonymize-ua');
 
+puppeteer.use(anonymizeUaPlugin());
 puppeteer.use(StealthPlugin());
 const { executablePath } = require('puppeteer');
 
@@ -32,6 +33,7 @@ const extract = async (location, datePosted) => {
         browser = await puppeteer.launch({
             headless: 'new',
             executablePath: executablePath(),
+            args: ['--no-sandbox'],
         });
         const page = await browser.newPage();
 
@@ -44,29 +46,17 @@ const extract = async (location, datePosted) => {
             }
         });
 
-        const cluster = await Cluster.launch({
-            concurrency: Cluster.CONCURRENCY_CONTEXT,
-            maxConcurrency: keywords.length,
-        });
-
         const jobsArray = [];
         try {
             const tempArray = [];
-            await cluster.task(async ({ page, data: url }) => {
-                // Navigate to the specified URL
-                await page.goto(url, {
+            for (const word of keywords) {
+                await page.goto(`${website}/jobs?q=${word}&l=${location}`, {
                     waitUntil: 'domcontentloaded',
                 });
                 await runFilter(page, datePosted);
                 const jobs = await scrape(page, website);
                 tempArray.push(...jobs);
-            });
-            for (const word of keywords) {
-                cluster.queue(`${website}/jobs?q=${word}&l=${location}`);
             }
-
-            await cluster.idle();
-            await cluster.close();
 
             for (const job of tempArray) {
                 const index = jobsArray.findIndex((i) => i.title === job.title);

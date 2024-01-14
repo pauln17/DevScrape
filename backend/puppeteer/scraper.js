@@ -1,57 +1,103 @@
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const { Cluster } = require('puppeteer-cluster');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
 puppeteer.use(StealthPlugin());
-const { executablePath } = require("puppeteer");
+const { executablePath } = require('puppeteer');
 
 // Websites
-const website = "https://ca.indeed.com";
+const website = 'https://ca.indeed.com';
 
 // Keywords
 const keywords = [
-    "Developer",
-    "Full Stack",
-    "Backend",
-    "Software Engineer",
-    "Developer Intern",
-    "Engineer Intern",
-    "Entry Level Developer",
-    "Entry Level Engineer",
+    'Developer',
+    'Full Stack',
+    'Backend',
+    'Software Engineer',
+    'Developer Intern',
+    'Engineer Intern',
+    'Entry Level Developer',
+    'Entry Level Engineer',
 ];
 
 // Scraper Function
-const extract = async (url, title, location, datePosted) => {
-    const browser = await puppeteer.launch({
-        headless: 'new',
-        executablePath: executablePath(),
-    });
-    const context = await browser.createIncognitoBrowserContext();
-    const page = await context.newPage();
+const extract = async (location, datePosted) => {
+    let browser;
 
-    await page.setRequestInterception(true);
-    page.on("request", (request) => {
-        if (request.resourceType() === "document") {
-            request.continue();
-        } else {
-            request.abort();
+    try {
+        browser = await puppeteer.launch({
+            headless: 'new',
+            executablePath: executablePath(),
+        });
+        const page = await browser.newPage();
+
+        await page.setRequestInterception(true);
+        page.on('request', (request) => {
+            if (request.resourceType() === 'document') {
+                request.continue();
+            } else {
+                request.abort();
+            }
+        });
+
+        const cluster = await Cluster.launch({
+            concurrency: Cluster.CONCURRENCY_CONTEXT,
+            maxConcurrency: keywords.length,
+        });
+
+        const jobsArray = [];
+        try {
+            const tempArray = [];
+            await cluster.task(async ({ page, data: url }) => {
+                // Navigate to the specified URL
+                await page.goto(url, {
+                    waitUntil: 'domcontentloaded',
+                });
+                await runFilter(page, datePosted);
+                const jobs = await scrape(page, website);
+                tempArray.push(...jobs);
+            });
+            for (const word of keywords) {
+                cluster.queue(`${website}/jobs?q=${word}&l=${location}`);
+            }
+
+            await cluster.idle();
+            await cluster.close();
+
+            for (const job of tempArray) {
+                const index = jobsArray.findIndex((i) => i.title === job.title);
+                if (index === -1) {
+                    jobsArray.push(job);
+                }
+            }
+        } finally {
+            page.close();
         }
-    });
 
-    await page.goto(`${website}/jobs?q=${title}&l=${location}`);
-    await page.content({
-        waitUntil: "networkidle2",
-    });
-    await runFilter(page, datePosted);
-    const jobs = await scrape(page, url);
-    await browser.close();
+        return jobsArray;
+    } catch (error) {
+        if (error.name === 'TimeoutError') {
+            console.error('Timeout Error:', error);
+        } else if (error.name === 'NetworkError') {
+            console.error('Network Error:', error);
+        } else {
+            console.error('An unexpected error occurred:', error);
+        }
 
-    return jobs;
+        if (browser) {
+            await browser.close();
+        }
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
 };
 
 const runFilter = async (page, datePosted) => {
-    const datePostedButton = await page.$("#filter-dateposted");
+    const datePostedButton = await page.$('#filter-dateposted');
     if (datePostedButton) {
-        await page.click("#filter-dateposted");
+        await page.click('#filter-dateposted');
         const element = (
             await page.$x(`//a[contains(text(), "Last ${datePosted}")]`)
         )[0];
@@ -61,31 +107,35 @@ const runFilter = async (page, datePosted) => {
             }, element);
         }
         await page.waitForNavigation({
-            waitUntil: "networkidle0",
+            waitUntil: 'networkidle0',
         });
     }
-
 };
 
-const scrape = async (page, url) => {
+const scrape = async (page, website) => {
     const extractedDataArray = [];
     let pageHasResults = true;
 
     while (pageHasResults) {
-        const resultsExist = await page.$(".resultContent");
+        const resultsExist = await page.$('.resultContent');
         if (resultsExist) {
             const extractedData = await page.$$eval(
-                ".resultContent",
+                '.resultContent',
                 (extractedData) => {
                     return extractedData.map((item) => ({
-                        title: item.querySelector(".jcs-JobTitle span").innerText,
-                        company: item.querySelector('span[data-testid="company-name"]')
+                        title: item.querySelector('.jcs-JobTitle span')
                             .innerText,
-                        location: item.querySelector('div[data-testid="text-location"]')
-                            .innerText,
-                        link: item.querySelector(".jcs-JobTitle").getAttribute("href"),
+                        company: item.querySelector(
+                            'span[data-testid="company-name"]'
+                        ).innerText,
+                        location: item.querySelector(
+                            'div[data-testid="text-location"]'
+                        ).innerText,
+                        link: item
+                            .querySelector('.jcs-JobTitle')
+                            .getAttribute('href'),
                     }));
-                },
+                }
             );
             extractedDataArray.push(...extractedData);
 
@@ -94,7 +144,9 @@ const scrape = async (page, url) => {
                 window.scrollTo(0, document.body.scrollHeight);
             });
 
-            const nextButton = await page.$('a[data-testid="pagination-page-next"]');
+            const nextButton = await page.$(
+                'a[data-testid="pagination-page-next"]'
+            );
             if (nextButton) {
                 await page.click('a[data-testid="pagination-page-next"]');
             } else {
@@ -108,17 +160,17 @@ const scrape = async (page, url) => {
     const jobs = [];
     for (const data of extractedDataArray) {
         const jobObject = await page.evaluate(
-            (data, url) => {
+            (data, website) => {
                 const jobObject = {
                     title: data.title,
                     company: data.company,
                     location: data.location,
-                    link: url + data.link,
+                    link: website + data.link,
                 };
                 return jobObject;
             },
             data,
-            url,
+            website
         );
         jobs.push(jobObject);
     }

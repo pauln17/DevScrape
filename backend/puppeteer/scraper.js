@@ -1,3 +1,7 @@
+const Job = require('../models/job');
+const { performance } = require('perf_hooks');
+const loggers = require('../utils/loggers');
+const mongoose = require('mongoose');
 const { Cluster } = require('puppeteer-cluster');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -5,7 +9,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 const { executablePath } = require('puppeteer');
 
-// Websites
+// Website
 const website = 'https://ca.indeed.com';
 
 // Keywords
@@ -178,8 +182,37 @@ const scrape = async (page, website) => {
     return jobs;
 };
 
+const task = async () => {
+    const t0 = performance.now();
+    let session;
+
+    try {
+        session = await mongoose.startSession();
+
+        await session.withTransaction(async () => {
+            await Job.deleteMany({}).session(session);
+            loggers.info('Scraping...');
+            const jobs = await extract('Waterloo, ON', '24');
+            await Job.insertMany(jobs, { session });
+        });
+
+        await session.commitTransaction();
+    } catch (error) {
+        loggers.info('Extract Task Error: ', error);
+    } finally {
+        session.endSession();
+    }
+
+    const t1 = performance.now();
+    loggers.info(
+        'Scraper completed in ' +
+            Math.floor(((t1 - t0) / 1000) * 1000) / 1000 +
+            ' seconds'
+    );
+};
+
+const pingRenderBackend = () => {};
+
 module.exports = {
-    extract,
-    keywords,
-    website,
+    task,
 };

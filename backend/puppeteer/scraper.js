@@ -17,13 +17,13 @@ const proxyUrl = config.PROXY_URL;
 // Keywords
 const keywords = [
     'Developer',
-    // 'Full Stack',
-    // 'Backend',
-    // 'Software Engineer',
-    // 'Developer Intern',
-    // 'Engineer Intern',
-    // 'Entry Level Developer',
-    // 'Entry Level Engineer',
+    'Full Stack',
+    'Backend',
+    'Software Engineer',
+    'Developer Intern',
+    'Engineer Intern',
+    'Entry Level Developer',
+    'Entry Level Engineer',
 ];
 
 // Scraper Function
@@ -52,11 +52,12 @@ const extract = async (location) => {
             const tempArray = [];
             for (const word of keywords) {
                 const encodedUrl = encodeURIComponent(
-                    `${website}/jobs?q=${word}&l=${location}&status=00&radius=50&fromage=1`
+                    `${website}/jobs?q=${word}&l=${location}&status=00&radius=50&fromage=7`
                 );
                 await page.goto(`${proxyUrl}${encodedUrl}`, {
                     waitUntil: 'domcontentloaded',
                 });
+                console.log(proxyUrl + encodedUrl);
                 const jobs = await scrape(page, website, word, location);
                 tempArray.push(...jobs);
             }
@@ -130,7 +131,7 @@ const scrape = async (page, website, word, location) => {
             if (nextButton && pageNumber < 3) {
                 pageNumber += 1;
                 const encodedUrl = encodeURIComponent(
-                    `${website}/jobs?q=${word}&l=${location}&status=${pageNumber.toString()}0&radius=50&fromage=1`
+                    `${website}/jobs?q=${word}&l=${location}&status=${pageNumber.toString()}0&radius=50&fromage=7`
                 );
                 await page.goto(`${proxyUrl}${encodedUrl}`, {
                     waitUntil: 'domcontentloaded',

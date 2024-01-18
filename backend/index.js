@@ -1,12 +1,12 @@
 const app = require('./app');
 const config = require('./utils/config');
 const logger = require('./utils/loggers');
-const cron = require('node-cron');
+// const cron = require('node-cron');
 const { task } = require('./puppeteer/scraper');
-const https = require('https');
+// const https = require('https');
 
 // Run daily at 10 AM
-cron.schedule(config.SCHEDULED_TIME, task);
+// cron.schedule(config.SCHEDULED_TIME, task);
 
 // Ping deployed frontend + backend sites to prevent sleeping
 // cron.schedule(config.PING_TIME, () => {
@@ -16,4 +16,5 @@ cron.schedule(config.SCHEDULED_TIME, task);
 
 app.listen(config.PORT, () => {
     logger.info(`Server running on port ${config.PORT}`);
+    task();
 });

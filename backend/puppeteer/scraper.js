@@ -5,28 +5,29 @@ const mongoose = require('mongoose');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const anonymizeUaPlugin = require('puppeteer-extra-plugin-anonymize-ua');
+const config = require('../utils/config');
 
 puppeteer.use(anonymizeUaPlugin());
 puppeteer.use(StealthPlugin());
-const { executablePath } = require('puppeteer');
 
 // Website
 const website = 'https://ca.indeed.com';
+const proxyUrl = config.PROXY_URL;
 
 // Keywords
 const keywords = [
     'Developer',
-    'Full Stack',
-    'Backend',
-    'Software Engineer',
-    'Developer Intern',
-    'Engineer Intern',
-    'Entry Level Developer',
-    'Entry Level Engineer',
+    // 'Full Stack',
+    // 'Backend',
+    // 'Software Engineer',
+    // 'Developer Intern',
+    // 'Engineer Intern',
+    // 'Entry Level Developer',
+    // 'Entry Level Engineer',
 ];
 
 // Scraper Function
-const extract = async (location, datePosted) => {
+const extract = async (location) => {
     let browser;
 
     try {
@@ -50,11 +51,13 @@ const extract = async (location, datePosted) => {
         try {
             const tempArray = [];
             for (const word of keywords) {
-                await page.goto(`${website}/jobs?q=${word}&l=${location}`, {
+                const encodedUrl = encodeURIComponent(
+                    `${website}/jobs?q=${word}&l=${location}&status=00&radius=50&fromage=1`
+                );
+                await page.goto(`${proxyUrl}${encodedUrl}`, {
                     waitUntil: 'domcontentloaded',
                 });
-                await runFilter(page, datePosted);
-                const jobs = await scrape(page, website);
+                const jobs = await scrape(page, website, word, location);
                 tempArray.push(...jobs);
             }
 
@@ -88,27 +91,10 @@ const extract = async (location, datePosted) => {
     }
 };
 
-const runFilter = async (page, datePosted) => {
-    const datePostedButton = await page.$('#filter-dateposted');
-    if (datePostedButton) {
-        await page.click('#filter-dateposted');
-        const element = (
-            await page.$x(`//a[contains(text(), "Last ${datePosted}")]`)
-        )[0];
-        if (element) {
-            await page.evaluate((element) => {
-                element.click();
-            }, element);
-        }
-        await page.waitForNavigation({
-            waitUntil: 'networkidle0',
-        });
-    }
-};
-
-const scrape = async (page, website) => {
+const scrape = async (page, website, word, location) => {
     const extractedDataArray = [];
     let pageHasResults = true;
+    let pageNumber = 0;
 
     while (pageHasResults) {
         const resultsExist = await page.$('.resultContent');
@@ -141,13 +127,19 @@ const scrape = async (page, website) => {
             const nextButton = await page.$(
                 'a[data-testid="pagination-page-next"]'
             );
-            if (nextButton) {
-                await page.click('a[data-testid="pagination-page-next"]');
+            if (nextButton && pageNumber < 3) {
+                pageNumber += 1;
+                const encodedUrl = encodeURIComponent(
+                    `${website}/jobs?q=${word}&l=${location}&status=${pageNumber.toString()}0&radius=50&fromage=1`
+                );
+                await page.goto(`${proxyUrl}${encodedUrl}`, {
+                    waitUntil: 'domcontentloaded',
+                });
             } else {
-                pageHasResults = false; // No next button, exit the loop
+                pageHasResults = false;
             }
         } else {
-            pageHasResults = false; // No results, exit the loop
+            pageHasResults = false;
         }
     }
 
@@ -182,7 +174,7 @@ const task = async () => {
         await session.withTransaction(async () => {
             await Job.deleteMany({}).session(session);
             loggers.info('Scraping...');
-            const jobs = await extract('Waterloo, ON', '24');
+            const jobs = await extract('Waterloo, ON');
             await Job.insertMany(jobs, { session });
         });
 
@@ -200,8 +192,6 @@ const task = async () => {
             ' seconds'
     );
 };
-
-const pingRenderBackend = () => {};
 
 module.exports = {
     task,

@@ -20,10 +20,7 @@ mongoose
     });
 
 // Misc
-const allowedOrigins = [
-    'http://localhost:3000',
-    'https://job-webscraper.onrender.com',
-];
+const allowedOrigins = ['http://localhost:3000'];
 app.use(
     cors({
         origin: allowedOrigins,

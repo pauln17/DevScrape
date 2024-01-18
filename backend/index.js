@@ -9,10 +9,10 @@ const https = require('https');
 cron.schedule(config.SCHEDULED_TIME, task);
 
 // Ping deployed frontend + backend sites to prevent sleeping
-cron.schedule(config.PING_TIME, () => {
-    https.get('https://job-webscraper-backend.onrender.com/api/jobs');
-    https.get('https://job-webscraper.onrender.com');
-});
+// cron.schedule(config.PING_TIME, () => {
+//     https.get('https://job-webscraper-backend.onrender.com/api/jobs');
+//     https.get('https://job-webscraper.onrender.com');
+// });
 
 app.listen(config.PORT, () => {
     logger.info(`Server running on port ${config.PORT}`);

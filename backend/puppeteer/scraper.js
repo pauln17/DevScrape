@@ -32,8 +32,8 @@ const extract = async (location, datePosted) => {
     try {
         browser = await puppeteer.launch({
             headless: 'new',
-            executablePath: executablePath(),
-            args: ['--no-sandbox'],
+            executablePath: '/usr/bin/google-chrome',
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
         const page = await browser.newPage();
 

@@ -22,7 +22,7 @@ mongoose
 // Misc
 const allowedOrigins = [
     'http://localhost:3000',
-    'https://job-webscrape.onrender.com',
+    'https://job-webscraper.onrender.com',
 ];
 app.use(
     cors({

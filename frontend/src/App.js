@@ -20,7 +20,7 @@ function App() {
 
     const updateTimer = () => {
         const currentDate = moment(new Date());
-        let nextDate = moment(currentDate).set({
+        let nextDate = moment(currentDate).day('Sunday').set({
             hour: 10,
             minute: 0,
             second: 0,
@@ -28,16 +28,18 @@ function App() {
         });
 
         if (currentDate.isAfter(nextDate)) {
-            nextDate.add(1, 'day');
+            nextDate.add(1, 'week');
         }
 
         const differenceInSeconds = (nextDate - currentDate) / 1000;
 
-        const hours = formatTime(Math.floor(differenceInSeconds / 3600) % 24),
+        const days = formatTime(Math.floor(differenceInSeconds / (24 * 3600))),
+            hours = formatTime(Math.floor(differenceInSeconds / 3600) % 24),
             minutes = formatTime(Math.floor(differenceInSeconds / 60) % 60),
             seconds = formatTime(Math.floor(differenceInSeconds % 60));
 
         setTime({
+            days,
             hours,
             minutes,
             seconds,
@@ -95,9 +97,9 @@ function App() {
                         fontSize: '24px',
                     }}
                 >
-                    An automated and personalized webscraper that retrieves the
-                    latest data on available developer-related job listings
-                    daily at 10AM EST
+                    An automated and personalized webscraper that retrieves data
+                    on available developer-related job listings weekly on
+                    Sundays at 10AM EST
                 </h3>
                 {time && (
                     <h1
@@ -108,7 +110,7 @@ function App() {
                             fontSize: '24px',
                         }}
                     >
-                        {time.hours}:{time.minutes}:{time.seconds}
+                        {time.days}:{time.hours}:{time.minutes}:{time.seconds}
                     </h1>
                 )}
             </div>

@@ -43,7 +43,7 @@ const extract = async (location) => {
             const tempArray = [];
             for (const word of keywords) {
                 const encodedUrl = encodeURIComponent(
-                    `${website}/jobs?q=${word}&l=${location}&status=00&radius=50&fromage=1`
+                    `${website}/jobs?q=${word}&l=${location}&status=00&radius=50&fromage=7`
                 );
                 await page.goto(`${proxyUrl}${encodedUrl}`, {
                     waitUntil: 'domcontentloaded',
@@ -121,7 +121,7 @@ const scrape = async (page, website, word, location) => {
             if (nextButton && pageNumber < 3) {
                 pageNumber += 1;
                 const encodedUrl = encodeURIComponent(
-                    `${website}/jobs?q=${word}&l=${location}&status=${pageNumber.toString()}0&radius=50&fromage=1`
+                    `${website}/jobs?q=${word}&l=${location}&status=${pageNumber.toString()}0&radius=50&fromage=7`
                 );
                 await page.goto(`${proxyUrl}${encodedUrl}`, {
                     waitUntil: 'domcontentloaded',

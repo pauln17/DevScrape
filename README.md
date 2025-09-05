@@ -3,3 +3,4 @@ Developed with Puppeteer, Axios, React, Express, MongoDB, Mongoose, and JavaScri
 
 # Live Demo
 https://job-webscraper.onrender.com/
+NO LONGER WORKING -> UPDATED THEIR ANTI-SCRAPING MEASURES
